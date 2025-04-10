@@ -75,7 +75,7 @@ def check_response(response):
         raise TypeError('Ответ от API не является словарем.')
 
     if 'error' in response:
-        raise Exception(f'Ошибка в ответе API: {response['error']}')
+        raise Exception(f'Ошибка в ответе API: {response["error"]}')
 
     if 'homeworks' not in response or 'current_date' not in response:
         raise KeyError('Не найдены ключи "homeworks" или "current_date".')
