@@ -110,7 +110,6 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-
     check_tokens()
 
     # Создаем объект класса бота
