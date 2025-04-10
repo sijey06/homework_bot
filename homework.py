@@ -12,7 +12,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s]: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[
-        logging.FileHandler(filename='bot1.log', mode='a', encoding='utf-8')
+        logging.FileHandler(filename='bot.log', mode='a', encoding='utf-8')
     ]
 )
 
@@ -35,12 +35,14 @@ HOMEWORK_VERDICTS = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
+STATUS_OK = 200
+
 
 def check_tokens():
     """Проверяет наличие необходимых токенов."""
     if not all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
-        logging.critical('Отсутствуют необходимые токены! Проверьте переменные окружения.')
-        raise ValueError('Отсутствуют необходимые токены!')
+        logging.critical('Отсутствуют необходимые токены!')
+        raise ValueError()
 
 
 def send_message(bot, message):
@@ -54,10 +56,11 @@ def send_message(bot, message):
 
 def get_api_answer(timestamp):
     """Делает запрос к API."""
-    params = {'from_date': timestamp}
     try:
-        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        if response.status_code != 200:
+        response = requests.get(
+            ENDPOINT, headers=HEADERS, params={'from_date': timestamp}
+        )
+        if response.status_code != STATUS_OK:
             raise Exception(
                 f'Ошибка при запросе к API Practicum: {response.status_code}'
             )
@@ -69,22 +72,18 @@ def get_api_answer(timestamp):
 def check_response(response):
     """Проверка ответа от API."""
     if not isinstance(response, dict):
-        logging.error('Ответ от API не является словарем.')
         raise TypeError('Ответ от API не является словарем.')
 
     if 'error' in response:
-        logging.error(f'Ошибка в ответе API: {response['error']}.')
         raise Exception(f'Ошибка в ответе API: {response['error']}')
 
     if 'homeworks' not in response or 'current_date' not in response:
-        logging.error('Не найдены ключи "homeworks" или "current_date".')
         raise KeyError('Не найдены ключи "homeworks" или "current_date".')
 
     if not isinstance(response['homeworks'], list):
-        logging.error('Данные под ключом "homeworks" не являются списком.')
         raise TypeError('Данные под ключом "homeworks" не являются списком.')
 
-    if len(response['homeworks']) == 0:
+    if not response['homeworks']:
         logging.debug('В ответе API отсутствуют новые статусы.')
         return None
 
@@ -94,18 +93,15 @@ def check_response(response):
 def parse_status(homework):
     """Извлечение статуса работы из ответа API."""
     if 'homework_name' not in homework:
-        logging.error('Ключ "homework_name" отсутствует в ответе API.')
         raise KeyError('Ключ "homework_name" отсутствует в ответе API.')
 
     homework_name = homework['homework_name']
-    if "status" not in homework:
-        logging.error('Ключ "status" отсутствует в ответе API.')
+    if 'status' not in homework:
         raise KeyError('Ключ "status" отсутствует в ответе API.')
 
     status = homework['status']
     if status not in HOMEWORK_VERDICTS:
-        logging.error(f'Недокументированный статус домашней работы: {status}.')
-        raise ValueError(f'Недокументированный статус домашней работы: {status}.')
+        raise ValueError(f'Неизвестный статус домашней работы: {status}.')
 
     verdict = HOMEWORK_VERDICTS.get(status, 'Статус неизвестен.')
 
