@@ -7,16 +7,6 @@ from telebot import TeleBot
 from dotenv import load_dotenv
 
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s]: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.FileHandler(filename='bot.log', mode='a', encoding='utf-8')
-    ]
-)
-
-
 load_dotenv()
 
 
@@ -40,18 +30,32 @@ STATUS_OK = 200
 
 def check_tokens():
     """Проверяет наличие необходимых токенов."""
-    if not all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
-        logging.critical('Отсутствуют необходимые токены!')
-        raise ValueError()
+    tokens = {
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
+    }
+
+    missing_tokens = [
+        token_name for token_name, token_value in tokens.items(
+        ) if not token_value
+    ]
+
+    if missing_tokens:
+        message = f"Отсутствуют следующие токены: {', '.join(missing_tokens)}"
+        logging.critical(message)
+        raise ValueError(message)
 
 
 def send_message(bot, message):
     """Отправляет сообщение в чат."""
     try:
+        logging.info(f'Отправка сообщения: "{message}"')
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug(f'Бот успешно отправил сообщение: "{message}".')
     except Exception as e:
         logging.error(f'Произошла ошибка при отправке сообщения: {e}')
+        raise
 
 
 def get_api_answer(timestamp):
@@ -60,13 +64,15 @@ def get_api_answer(timestamp):
         response = requests.get(
             ENDPOINT, headers=HEADERS, params={'from_date': timestamp}
         )
-        if response.status_code != STATUS_OK:
-            raise Exception(
-                f'Ошибка при запросе к API Practicum: {response.status_code}'
-            )
-        return response.json()
     except requests.RequestException as e:
         raise ConnectionError(f'Ошибка соединения с API Practicum: {e}')
+
+    if response.status_code != STATUS_OK:
+        raise Exception(
+            f'Ошибка при запросе к API Practicum: {response.status_code}'
+        )
+
+    return response.json()
 
 
 def check_response(response):
@@ -138,4 +144,14 @@ def main():
 
 
 if __name__ == '__main__':
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(levelname)s]: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[
+            logging.FileHandler(filename='bot.log', mode='a', encoding='utf-8')
+        ]
+    )
+
     main()
