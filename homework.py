@@ -50,12 +50,14 @@ def check_tokens():
 def send_message(bot, message):
     """Отправляет сообщение в чат."""
     try:
-        logging.info(f'Отправка сообщения: "{message}"')
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug(f'Бот успешно отправил сообщение: "{message}".')
-    except Exception as e:
-        logging.error(f'Произошла ошибка при отправке сообщения: {e}')
-        raise
+    except requests.RequestException as req_err:
+        raise req_err
+    except ValueError as val_err:
+        raise val_err
+    except Exception as exc:
+        raise exc
 
 
 def get_api_answer(timestamp):
@@ -130,7 +132,20 @@ def main():
             if new_homeworks is not None:
                 for homework in new_homeworks:
                     message = parse_status(homework)
-                    send_message(bot, message)
+                    try:
+                        send_message(bot, message)
+                    except requests.RequestException as req_err:
+                        logging.error(
+                            f'Ошибка при отправке сообщения:{req_err}'
+                        )
+                    except ValueError as val_err:
+                        logging.error(
+                            f'Ошибка значения при отправке сообщения:{val_err}'
+                        )
+                    except Exception as exc:
+                        logging.error(
+                            f'Неожиданная ошибка при отправке сообщения:{exc}'
+                        )
 
             timestamp = api_answer.get('current_date', timestamp)
 
