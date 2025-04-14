@@ -3,8 +3,11 @@ import time
 import logging
 
 import requests
+from telebot.apihelper import ApiException
 from telebot import TeleBot
 from dotenv import load_dotenv
+
+from exception import SendMessExcept
 
 
 load_dotenv()
@@ -52,12 +55,8 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug(f'Бот успешно отправил сообщение: "{message}".')
-    except requests.RequestException as req_err:
-        raise req_err
-    except ValueError as val_err:
-        raise val_err
-    except Exception as exc:
-        raise exc
+    except (requests.RequestException, ApiException) as err:
+        raise SendMessExcept(f'Ошибка при отправке сообщения: {err}') from err
 
 
 def get_api_answer(timestamp):
@@ -83,7 +82,7 @@ def check_response(response):
         raise TypeError('Ответ от API не является словарем.')
 
     if 'error' in response:
-        raise Exception(f'Ошибка в ответе API: {response["error"]}')
+        raise ValueError(f'Ошибка в ответе API: {response["error"]}')
 
     if 'homeworks' not in response or 'current_date' not in response:
         raise KeyError('Не найдены ключи "homeworks" или "current_date".')
@@ -132,27 +131,16 @@ def main():
             if new_homeworks is not None:
                 for homework in new_homeworks:
                     message = parse_status(homework)
-                    try:
-                        send_message(bot, message)
-                    except requests.RequestException as req_err:
-                        logging.error(
-                            f'Ошибка при отправке сообщения:{req_err}'
-                        )
-                    except ValueError as val_err:
-                        logging.error(
-                            f'Ошибка значения при отправке сообщения:{val_err}'
-                        )
-                    except Exception as exc:
-                        logging.error(
-                            f'Неожиданная ошибка при отправке сообщения:{exc}'
-                        )
+                    send_message(bot, message)
+                    # try:
+                    #     send_message(bot, message)
+                    # except Exception as e:
+                    #     logging.error(f'Ошибка при отправке сообщения: {e}')
 
             timestamp = api_answer.get('current_date', timestamp)
 
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
-            logging.error(message)
+            logging.error(f'Сбой в работе программы: {error}')
 
         finally:
             time.sleep(RETRY_PERIOD)

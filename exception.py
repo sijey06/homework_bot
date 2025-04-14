@@ -1,0 +1,2 @@
+class SendMessExcept(Exception):
+    pass
