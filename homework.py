@@ -132,10 +132,6 @@ def main():
                 for homework in new_homeworks:
                     message = parse_status(homework)
                     send_message(bot, message)
-                    # try:
-                    #     send_message(bot, message)
-                    # except Exception as e:
-                    #     logging.error(f'Ошибка при отправке сообщения: {e}')
 
             timestamp = api_answer.get('current_date', timestamp)
 
